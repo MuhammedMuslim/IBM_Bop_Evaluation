@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap');
+
+:root {
+  --bg: #f3f6f4;
+  --bg-accent: #e7eee9;
+  --surface: #ffffff;
+  --ink: #1c2b24;
+  --muted: #5d6f66;
+  --line: #d5e0da;
+  --brand: #0f6b4c;
+  --brand-dark: #0a4d37;
+  --brand-soft: #d8efe5;
+  --warn: #9a6700;
+  --danger: #b42318;
+  --ok: #067647;
+  --shadow: 0 10px 30px rgba(28, 43, 36, 0.08);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(15, 107, 76, 0.08), transparent 32%),
+    linear-gradient(180deg, #f7faf8 0%, var(--bg) 40%, #eef3f0 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Source Serif 4', serif;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--brand);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--brand-dark);
+}
+
+.btn.secondary {
+  background: var(--bg-accent);
+  color: var(--ink);
+}
+
+.btn.danger {
+  background: var(--danger);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-size: 0.95rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--bg-accent);
+}
+
+.badge.PENDING { background: #fff4ce; color: var(--warn); }
+.badge.APPROVED { background: #dcfae6; color: var(--ok); }
+.badge.REJECTED { background: #fee4e2; color: var(--danger); }
+.badge.CANCELLED { background: #eceff2; color: #475467; }
+
+.error {
+  color: var(--danger);
+  background: #fee4e2;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.success {
+  color: var(--ok);
+  background: #dcfae6;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.stat {
+  padding: 18px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 1.8rem;
+  margin-top: 6px;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nav-links a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.nav-links a.active,
+.nav-links a:hover {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.brand {
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+}
+
+.login-card h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.demo-users {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}

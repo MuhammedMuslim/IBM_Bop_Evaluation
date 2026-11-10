@@ -1,0 +1,568 @@
+<title>ELMS: Cursor vs IBM Bob</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column with a sticky section index; wide tables scroll in their own frame. */
+:root {
+  --bg: #f6f7f5; --surface: #ffffff; --ink: #1c2321; --muted: #5c6763; --line: #dfe3e0;
+  --cursor: #0f6b5c; --cursor-soft: #e2f1ed; --ibm: #3f4fb3; --ibm-soft: #e7e9f8;
+  --pass: #17663a; --pass-bg: #ddf1e4; --fail: #a32121; --fail-bg: #f9e0e0; --part: #8a5a00; --part-bg: #fbefd6; --na-bg: #eceeed;
+  --code-bg: #eef1ef;
+  --f-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121615; --surface: #1a201e; --ink: #e5ebe8; --muted: #9aa8a3; --line: #2c3532;
+  --cursor: #5cc6b1; --cursor-soft: #173430; --ibm: #9aa6f2; --ibm-soft: #22274a;
+  --pass: #6fd497; --pass-bg: #173323; --fail: #f08b8b; --fail-bg: #3b1c1c; --part: #f0c060; --part-bg: #3a2e14; --na-bg: #252c2a;
+  --code-bg: #222a28; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121615; --surface: #1a201e; --ink: #e5ebe8; --muted: #9aa8a3; --line: #2c3532;
+  --cursor: #5cc6b1; --cursor-soft: #173430; --ibm: #9aa6f2; --ibm-soft: #22274a;
+  --pass: #6fd497; --pass-bg: #173323; --fail: #f08b8b; --fail-bg: #3b1c1c; --part: #f0c060; --part-bg: #3a2e14; --na-bg: #252c2a;
+  --code-bg: #222a28; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.6; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 80px; }
+h1, h2 { font-family: var(--f-display); font-weight: 400; letter-spacing: -0.01em; text-wrap: balance; line-height: 1.1; }
+h1 { font-size: clamp(2.3rem, 5vw, 3.4rem); margin: 0 0 12px; }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.2rem); margin: 0 0 6px; scroll-margin-top: 72px; }
+h3 { font-size: 1.05rem; margin: 26px 0 8px; font-weight: 600; text-wrap: balance; }
+p { margin: 0 0 12px; max-width: 72ch; }
+a { color: inherit; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+code, .mono { font-family: var(--f-mono); font-size: 0.84em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.eyebrow { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; }
+.lede { font-size: 1.12rem; color: var(--muted); max-width: 70ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 18px; font-size: 0.88rem; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 600; }
+
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); margin-top: 28px; }
+nav.toc ul { list-style: none; display: flex; gap: 4px 18px; overflow-x: auto; margin: 0; padding: 10px 0; scrollbar-width: thin; }
+nav.toc a { white-space: nowrap; font-size: 0.86rem; color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); text-decoration: underline; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+
+section { padding-top: 52px; }
+.sub { color: var(--muted); margin-bottom: 18px; }
+
+.app-c { color: var(--cursor); font-weight: 600; }
+.app-i { color: var(--ibm); font-weight: 600; }
+
+.verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 22px; }
+.vcard { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; min-width: 0; }
+.vcard h3 { margin: 0 0 4px; font-size: 1.15rem; }
+.vcard.c { border-top: 4px solid var(--cursor); }
+.vcard.i { border-top: 4px solid var(--ibm); }
+.vcard ul { margin: 8px 0 0; padding-left: 18px; }
+.vcard li { margin-bottom: 4px; }
+.tally { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+
+.chip { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pass { background: var(--pass-bg); color: var(--pass); }
+.fail { background: var(--fail-bg); color: var(--fail); }
+.part { background: var(--part-bg); color: var(--part); }
+.na { background: var(--na-bg); color: var(--muted); }
+.sev-crit { background: var(--fail); color: var(--surface); }
+.sev-high { background: var(--fail-bg); color: var(--fail); }
+.sev-med { background: var(--part-bg); color: var(--part); }
+.sev-low { background: var(--na-bg); color: var(--muted); }
+.adv-c { background: var(--cursor-soft); color: var(--cursor); }
+.adv-i { background: var(--ibm-soft); color: var(--ibm); }
+
+.tframe { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin: 12px 0 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; background: var(--surface); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td .ev { color: var(--muted); font-size: 0.84rem; display: block; margin-top: 3px; }
+.rules td:first-child { white-space: nowrap; font-family: var(--f-mono); font-size: 0.8rem; }
+.rules { min-width: 860px; }
+.findings { min-width: 820px; }
+.shotlink { font-size: 0.8rem; background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 3px; cursor: pointer; font-family: inherit; }
+.shotlink:focus-visible, .thumb:focus-visible, .tab:focus-visible { outline: 2px solid var(--ibm); outline-offset: 2px; }
+
+.callout { border-left: 3px solid var(--line); padding: 4px 0 4px 14px; color: var(--muted); font-size: 0.92rem; margin: 14px 0; max-width: 80ch; }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.cols > div { min-width: 0; }
+ul.plain { padding-left: 18px; margin: 6px 0; }
+ul.plain li { margin-bottom: 5px; }
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0; }
+.tab { border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 6px 14px; border-radius: 999px; font: 600 0.86rem var(--f-body); cursor: pointer; }
+.tab[aria-selected="true"].c { background: var(--cursor); border-color: var(--cursor); color: var(--surface); }
+.tab[aria-selected="true"].i { background: var(--ibm); border-color: var(--ibm); color: var(--surface); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.thumb { display: flex; flex-direction: column; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; cursor: zoom-in; text-align: left; color: var(--ink); font: inherit; min-width: 0; }
+.thumb img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-radius: 4px; border: 1px solid var(--line); background: var(--code-bg); max-width: 100%; }
+.thumb span { font-size: 0.8rem; line-height: 1.35; }
+.thumb small { font-family: var(--f-mono); font-size: 0.7rem; color: var(--muted); }
+.group-h { grid-column: 1 / -1; margin: 10px 0 0; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 22px; }
+.pair figure { margin: 0; min-width: 0; }
+.pair figcaption { font-size: 0.82rem; margin-bottom: 6px; }
+.pair .thumb img { aspect-ratio: 16 / 9; }
+@media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+
+dialog { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 94vh; }
+dialog::backdrop { background: rgba(10, 14, 13, 0.82); }
+.lb { display: flex; flex-direction: column; gap: 8px; }
+.lb img { max-width: 96vw; max-height: 84vh; width: auto; border-radius: 6px; background: #fff; }
+.lb-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #f2f5f4; font-size: 0.88rem; }
+.lb-bar button { background: #f2f5f4; color: #1c2321; border: 0; border-radius: 6px; padding: 6px 12px; font: 600 0.85rem var(--f-body); cursor: pointer; }
+
+.bars { display: grid; gap: 10px; margin: 10px 0; }
+.bar-row { display: grid; grid-template-columns: minmax(130px, 210px) 1fr; gap: 10px; align-items: center; font-size: 0.86rem; }
+.bar-track { display: grid; gap: 3px; min-width: 0; }
+.bar { height: 14px; border-radius: 3px; display: flex; align-items: center; }
+.bar.c { background: var(--cursor); }
+.bar.i { background: var(--ibm); }
+.bar-label { font-family: var(--f-mono); font-size: 0.74rem; color: var(--muted); padding-left: 6px; white-space: nowrap; }
+.bar-line { display: flex; align-items: center; min-width: 0; }
+.legend { display: flex; gap: 16px; font-size: 0.82rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Implementation comparison · Employee Leave Management System BRD v1.0</div>
+  <h1>ELMS: Cursor vs IBM Bob</h1>
+  <p class="lede">Two AI agents built the same React + Spring Boot + PostgreSQL leave system from one BRD. This report compares them on business-rule compliance, code quality, performance, security and delivery. Every finding below was checked against the running applications or the source, and each one links to its evidence.</p>
+  <div class="meta">
+    <span>Evaluated <b>9 Nov 2026</b></span>
+    <span><span class="app-c">Cursor</span> UI :5173 · API :8081</span>
+    <span><span class="app-i">IBM Bob</span> UI :3000 · API :8082</span>
+    <span><b>54</b> screenshots · <b>14</b> BRD rules · <b>9</b> security checks · <b>2</b> concurrency tests</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <ul>
+    <li><a href="#verdict">Verdict</a></li>
+    <li><a href="#scorecard">Scorecard</a></li>
+    <li><a href="#rules">Business rules</a></li>
+    <li><a href="#findings">Defects</a></li>
+    <li><a href="#security">Security</a></li>
+    <li><a href="#performance">Performance</a></li>
+    <li><a href="#quality">Code quality</a></li>
+    <li><a href="#coverage">BRD coverage</a></li>
+    <li><a href="#rule-shots">Rule evidence</a></li>
+    <li><a href="#gallery">All screens</a></li>
+    <li><a href="#method">Method</a></li>
+  </ul>
+</nav>
+
+<section id="verdict">
+  <h2>Verdict</h2>
+  <p class="sub">Cursor's build is the one that works end to end. IBM Bob's build has the better deployment setup and a richer data model, but its core approval flow fails most of the time.</p>
+  <div class="verdict">
+    <div class="vcard c">
+      <div class="eyebrow">Recommended baseline</div>
+      <h3 class="app-c">Cursor</h3>
+      <div class="tally"><span class="chip pass">11 pass</span><span class="chip part">3 partial</span><span class="chip na">0 fail</span></div>
+      <ul>
+        <li>The full request → approve → balance → cancel cycle works in the API and the UI.</li>
+        <li>Clean layering: DTOs at every boundary, explicit fetch joins, Open-Session-in-View off.</li>
+        <li>Seeded demo for every role. Balances are created automatically for new hires.</li>
+        <li>Main gaps: deactivated users keep access until their token expires, HR can approve any request, and configuration is hard-coded with no migrations or tests.</li>
+      </ul>
+    </div>
+    <div class="vcard i">
+      <div class="eyebrow">Needs fixes before use</div>
+      <h3 class="app-i">IBM Bob</h3>
+      <div class="tally"><span class="chip pass">9 pass</span><span class="chip part">3 partial</span><span class="chip fail">2 fail</span></div>
+      <ul>
+        <li>Manager approve/reject returned HTTP 500 in <b>55 of 61</b> attempts. The request stays pending.</li>
+        <li>A manager can approve their own leave once HR sets them as their own manager.</li>
+        <li>Policies and Audit Logs pages show empty tables because both APIs return 500.</li>
+        <li>Strengths: Docker Compose for the full stack, Flyway migrations, environment-based config, TypeScript, pessimistic locking and an adjustment-history table.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="callout">The rule tallies count the 14 BRD rules from <a href="#rules">the rule matrix</a>. "Partial" means the rule holds in normal use but breaks in an edge case we reproduced, such as concurrent submits.</p>
+</section>
+
+<section id="scorecard">
+  <h2>Scorecard</h2>
+  <p class="sub">Which build is ahead on each criterion, and why. The reasons are summaries of findings detailed further down.</p>
+  <div class="tframe"><table>
+    <thead><tr><th>Criterion</th><th>Advantage</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>Functional correctness</b></td><td><span class="chip adv-c">Cursor</span></td><td>All 19 Cursor screens load real data and every workflow completes. IBM's approvals fail about 90% of the time, and 2 of its 17 screens are empty because of API errors.</td></tr>
+      <tr><td><b>BRD business rules</b></td><td><span class="chip adv-c">Cursor</span></td><td>Cursor: 11 pass, 3 partial. IBM: 9 pass, 3 partial, 2 fail (RULE-06 self-approval, RULE-09 approvals fail).</td></tr>
+      <tr><td><b>Security</b></td><td><span class="chip adv-c">Cursor</span></td><td>IBM allows self-approval and lets any user read any leave request by id. Cursor's worst issue is that deactivated users keep working tokens for up to 24 h.</td></tr>
+      <tr><td><b>Backend code quality</b></td><td><span class="chip adv-c">Cursor</span></td><td>IBM's controllers return JPA entities and its <code>@Async</code> services share a Hibernate session across threads, which causes the 500s. Cursor maps everything to DTOs inside clear transactions (33 <code>@Transactional</code> vs 9).</td></tr>
+      <tr><td><b>Frontend code quality</b></td><td><span class="chip na">Even</span></td><td>IBM: TypeScript (type-check passes) and role-based route guards, but 218 inline style objects, 4 unused dependencies, deprecated Create React App and a test suite that can't start. Cursor: Vite, a shared stylesheet and a smaller bundle, but plain JavaScript with 11 lint warnings.</td></tr>
+      <tr><td><b>Performance</b></td><td><span class="chip adv-c">Cursor</span></td><td>2.3× throughput on the busiest list endpoint and a 27% smaller JS bundle. IBM is faster on login and the user list. The two runtimes differ (host JVM vs Docker), so read this as indicative.</td></tr>
+      <tr><td><b>Deployment &amp; operations</b></td><td><span class="chip adv-i">IBM Bob</span></td><td>IBM ships a 4-service Docker Compose stack, multi-stage Dockerfiles, a non-root runtime user, Flyway and environment variables. Cursor only containerises Postgres, hard-codes secrets and uses <code>ddl-auto: update</code>. IBM's healthcheck is broken, though.</td></tr>
+      <tr><td><b>Domain model</b></td><td><span class="chip adv-i">IBM Bob</span></td><td>IBM adds minimum notice, a cancellation flag (both enforced), carry-over and half-day fields (stored but unused), and a <code>balance_adjustments</code> history table.</td></tr>
+      <tr><td><b>Demo readiness</b></td><td><span class="chip adv-c">Cursor</span></td><td>Cursor seeds all 5 roles with balances and current-year holidays. IBM seeds only admin and HR, needs a manual bulk-assign before anyone can request leave, and its holidays are for 2025.</td></tr>
+      <tr><td><b>Testing</b></td><td><span class="chip na">Neither</span></td><td>Neither has backend tests. IBM's only frontend test is the default CRA placeholder, and it fails with <code>Cannot find module 'react-router/dom'</code>.</td></tr>
+      <tr><td><b>Build effort (self-reported)</b></td><td><span class="chip adv-c">Cursor</span></td><td>Cursor report: about 11 minutes of active build. IBM report: about 3 hours, including 10 build and runtime fixes.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="rules">
+  <h2>Business rules (BRD §7)</h2>
+  <p class="sub">Each rule was exercised through the REST API with fresh test users. Results are HTTP status plus the server's message or the balance before and after. Links open the matching UI screenshot.</p>
+  <div class="tframe"><table class="rules">
+    <thead><tr><th>Rule</th><th>Requirement</th><th>Cursor</th><th>IBM Bob</th></tr></thead>
+    <tbody>
+      <tr><td>RULE-01</td><td>Authentication required to submit</td>
+        <td><span class="chip pass">Pass</span><span class="ev">No token → 403. Bad password → 401 "Invalid email or password". <button class="shotlink" data-shot="cursor/02-login-invalid.png">screen</button></span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">No token → 403. A bad password returns <b>500</b> "An unexpected error occurred" (see D-I6). <button class="shotlink" data-shot="ibm/02-login-invalid.png">screen</button></span></td></tr>
+      <tr><td>RULE-02</td><td>Start date ≤ end date</td>
+        <td><span class="chip pass">Pass</span><span class="ev">400 "Start date must be on or before end date". <button class="shotlink" data-shot="cursor/22-rule02-end-before-start.png">screen</button></span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">400 from the API. The browser also blocks it ("Value must be 2026-12-10 or later"). <button class="shotlink" data-shot="ibm/20-rule02-end-before-start.png">screen</button></span></td></tr>
+      <tr><td>RULE-03</td><td>No past dates</td>
+        <td><span class="chip pass">Pass</span><span class="ev">400 "Leave cannot start in the past". <button class="shotlink" data-shot="cursor/23-rule03-past-date.png">screen</button></span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">400 from the API, and blocked in the browser by a <code>min</code> date. <button class="shotlink" data-shot="ibm/21-rule03-past-date.png">screen</button></span></td></tr>
+      <tr><td>RULE-04</td><td>Sufficient balance</td>
+        <td><span class="chip pass">Pass</span><span class="ev">15 sick days vs 10 available → 400 "Insufficient leave balance". <button class="shotlink" data-shot="cursor/24-rule04-insufficient.png">screen</button></span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">400 "Insufficient leave balance. Available: 10.00 days." <button class="shotlink" data-shot="ibm/22-rule04-insufficient.png">screen</button></span></td></tr>
+      <tr><td>RULE-05</td><td>No overlapping active requests</td>
+        <td><span class="chip part">Partial</span><span class="ev">Sequential: 409 "Overlapping leave request exists". <b>8 parallel identical submits saved 2 duplicates</b> (C-01). <button class="shotlink" data-shot="cursor/25-rule05-overlap.png">screen</button></span></td>
+        <td><span class="chip part">Partial</span><span class="ev">Sequential: 400 with an overlap message. <b>8 parallel identical submits saved 3 duplicates</b> (C-01). <button class="shotlink" data-shot="ibm/23-rule05-overlap.png">screen</button></span></td></tr>
+      <tr><td>RULE-06</td><td>Cannot approve own request</td>
+        <td><span class="chip pass">Pass</span><span class="ev">Employee → 403. Manager approving own → 403 "Employees cannot approve their own requests". Setting a user as their own manager → 400.</span></td>
+        <td><span class="chip fail">Fail</span><span class="ev">No explicit check. HR set a manager as their own manager (200), and that manager then <b>approved their own leave</b> (status APPROVED, reviewed by "Self Approver").</span></td></tr>
+      <tr><td>RULE-07</td><td>Only the assigned manager decides</td>
+        <td><span class="chip part">Partial</span><span class="ev">Another manager → 403. <b>HR and System Admin can approve any request</b> (200), which the code allows on purpose.</span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">Another manager and HR → 400 "You are not the assigned manager for this request."</span></td></tr>
+      <tr><td>RULE-08</td><td>Only PENDING can be decided</td>
+        <td><span class="chip pass">Pass</span><span class="ev">Approving a rejected request → 400 "Only pending requests can be decided".</span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">400 "Only PENDING requests can be reviewed."</span></td></tr>
+      <tr><td>RULE-09</td><td>Approval reduces balance</td>
+        <td><span class="chip pass">Pass</span><span class="ev">Available 20 → 18 while pending → used 2 after approval. Also approved in the UI. <button class="shotlink" data-shot="cursor/27-rule09-manager-approves.png">screen</button></span></td>
+        <td><span class="chip fail">Fail</span><span class="ev"><b>Approve/reject failed in 55 of 61 attempts</b> (HTTP 500, rolled back). When an approval does commit, the balance is deducted correctly. <button class="shotlink" data-shot="ibm/25-rule09-manager-approves.png">screen</button></span></td></tr>
+      <tr><td>RULE-10</td><td>Rejection leaves balance unchanged</td>
+        <td><span class="chip pass">Pass</span><span class="ev">Available 20 → 20 after rejection.</span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">Available 21 → 21 when the rejection committed. Failed rejections also leave the balance alone.</span></td></tr>
+      <tr><td>RULE-11</td><td>Cancel approved leave restores balance</td>
+        <td><span class="chip pass">Pass</span><span class="ev">Used 2 → 0 after cancelling an approved request (policy flag <code>restoreBalanceOnCancel</code>).</span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">Re-tested on a committed approval: used 1 → 0, available 18 → 19.</span></td></tr>
+      <tr><td>RULE-12</td><td>HR adjustment requires a reason</td>
+        <td><span class="chip pass">Pass</span><span class="ev">Blank → 400 "Validation failed". With a reason → 200. The reason is kept in the audit log only.</span></td>
+        <td><span class="chip pass">Pass</span><span class="ev">Blank → 400 "reason: must not be blank". The reason is stored in <code>balance_adjustments</code>.</span></td></tr>
+      <tr><td>RULE-13</td><td>Exclude weekends and public holidays</td>
+        <td><span class="chip pass">Pass</span><span class="ev">Fri 4 – Mon 7 Dec = 2 days. 21–25 Dec = 4 days (Christmas 2026 is seeded).</span></td>
+        <td><span class="chip part">Partial</span><span class="ev">Weekends: 2 days ✓. 21–25 Dec = <b>5 days</b> because the seeded holidays are 2025 only. With a 2026 holiday added temporarily the logic gives 4 ✓.</span></td></tr>
+      <tr><td>RULE-14</td><td>Atomic balance updates</td>
+        <td><span class="chip part">Partial</span><span class="ev">Optimistic <code>@Version</code>: the balance was never corrupted, but 7 of 8 valid parallel requests failed with <b>500</b> and a raw Hibernate message.</span></td>
+        <td><span class="chip part">Partial</span><span class="ev">Pessimistic lock: capacity respected (exactly 10 of 10 days reserved), but 2 requests that were saved returned <b>500</b> to the client.</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout">IBM Bob's own report marks all 14 rules ✅ and says RULE-06 is "enforced by RULE-07". The live tests above contradict RULE-06 and RULE-09, and partly contradict RULE-05, RULE-13 and RULE-14.</p>
+</section>
+
+<section id="findings">
+  <h2>Verified defects</h2>
+  <p class="sub">Ranked by severity. Each one was reproduced, and its source location is given as <code>file:line</code>.</p>
+
+  <h3 class="app-i">IBM Bob</h3>
+  <div class="tframe"><table class="findings">
+    <thead><tr><th>ID</th><th>Severity</th><th>Defect</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">D-I1</td><td><span class="chip sev-crit">Critical</span></td><td><b>Approve/reject fails about 90% of the time.</b> <code>EmailService</code> methods are <code>@Async</code> (<code>EmailService.java:18, :49</code>). They read lazy <code>LeaveType</code>/<code>User</code> proxies through the request thread's Hibernate session while that thread commits. Hibernate throws <code>ConcurrentModificationException</code> or "Illegal pop()", and the commit is rolled back.</td><td>6 of 61 decisions committed across 8 runs, including one through the UI and one after a container restart. The logs show <code>task-N</code> threads failing inside <code>AbstractLazyInitializer</code>. The UI shows "An unexpected error occurred". <button class="shotlink" data-shot="ibm/25-rule09-manager-approves.png">screen</button></td></tr>
+      <tr><td class="mono">D-I2</td><td><span class="chip sev-crit">Critical</span></td><td><b>Self-approval (RULE-06).</b> <code>updateUser</code> accepts <code>managerId</code> equal to the user's own id (<code>UserService.java:72</code>). <code>review()</code> checks only the assigned manager (<code>LeaveRequestService.java:115</code>).</td><td>HR set user 18 as manager of user 18. That user then approved their own request (APPROVED, reviewed by "Self Approver").</td></tr>
+      <tr><td class="mono">D-I3</td><td><span class="chip sev-high">High</span></td><td><b>Leave Policies and Audit Logs screens are empty.</b> <code>GET /api/hr/policies</code> and <code>/api/hr/audit-logs</code> return JPA entities with lazy proxies (<code>HrController.java:93, :143</code>), Jackson fails, and the API returns 500. The UI shows an empty table with no error.</td><td>The database holds 6 policies and 227 audit rows, but both screens are empty. <button class="shotlink" data-shot="ibm/14-hr-hr-policies.png">policies</button> · <button class="shotlink" data-shot="ibm/17-hr-hr-audit-logs.png">audit</button></td></tr>
+      <tr><td class="mono">D-I4</td><td><span class="chip sev-high">High</span></td><td><b>Any user can read any leave request.</b> <code>GET /api/leave-requests/{id}</code> has no ownership or role check (<code>LeaveRequestController.java:46</code>).</td><td>Employee B received 200 with employee A's name and reason.</td></tr>
+      <tr><td class="mono">D-I5</td><td><span class="chip sev-high">High</span></td><td><b>New employees cannot request leave.</b> <code>createUser</code> creates no balances (<code>UserService.java:40</code>). HR must run "bulk assign" first.</td><td>New user: 0 balances. Submitting returns 400 "No leave balance found for Annual Leave in 2026".</td></tr>
+      <tr><td class="mono">D-I6</td><td><span class="chip sev-med">Medium</span></td><td><b>A wrong password or a disabled account returns 500.</b> The exception handler has no case for authentication errors (<code>GlobalExceptionHandler.java:35</code>).</td><td><code>POST /auth/login</code> with a bad password → HTTP 500. <button class="shotlink" data-shot="ibm/02-login-invalid.png">screen</button></td></tr>
+      <tr><td class="mono">D-I7</td><td><span class="chip sev-med">Medium</span></td><td><b>Overlap race, and saved requests reported as failed.</b> The overlap check (<code>:55</code>) runs before the balance row is locked (<code>:78</code>).</td><td>C-01: 3 identical PENDING rows saved. C-02: 5 requests saved, but 2 of them returned 500.</td></tr>
+      <tr><td class="mono">D-I8</td><td><span class="chip sev-med">Medium</span></td><td><b>Leave-type and policy endpoints accept raw entities</b> (<code>HrController.java:77–105</code>). A partial update erases the fields it doesn't include, and there is no validation.</td><td>A PUT with only <code>name</code> set the description to null. The test type was deleted afterwards.</td></tr>
+      <tr><td class="mono">D-I9</td><td><span class="chip sev-med">Medium</span></td><td><b>Any manager can read any employee's balances</b> (<code>ManagerController.java:56</code>).</td><td>A manager from another team got 200 with 6 balances.</td></tr>
+      <tr><td class="mono">D-I10</td><td><span class="chip sev-low">Low</span></td><td><b>The container is always "unhealthy".</b> The healthcheck calls <code>curl</code>, which isn't in the image, and <code>/actuator/health</code>, which doesn't exist (no actuator dependency) (<code>docker-compose.yml:47</code>).</td><td><code>docker ps</code>: "Up (unhealthy)". Health log: <code>/bin/sh: curl: not found</code>.</td></tr>
+      <tr><td class="mono">D-I11</td><td><span class="chip sev-low">Low</span></td><td><b>Seed data is out of date and minimal:</b> holidays for 2025 only (<code>V2__seed_data.sql:40</code>), and only admin and HR users.</td><td>RULE-13b gives 5 days instead of 4. The holiday logic itself was confirmed correct.</td></tr>
+      <tr><td class="mono">D-I12</td><td><span class="chip sev-low">Low</span></td><td><b>Frontend upkeep:</b> the test suite can't start, 4 dependencies are never imported (<code>@tanstack/react-query</code>, <code>react-hook-form</code>, <code>date-fns</code>, <code>lucide-react</code>), and Create React App needs <code>--legacy-peer-deps</code>.</td><td><code>react-scripts test</code> → "Cannot find module 'react-router/dom'". <code>grep</code> finds 0 imports of those 4 packages.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 class="app-c">Cursor</h3>
+  <div class="tframe"><table class="findings">
+    <thead><tr><th>ID</th><th>Severity</th><th>Defect</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">D-C1</td><td><span class="chip sev-high">High</span></td><td><b>Deactivated users keep access.</b> The JWT filter loads the user but never checks <code>isEnabled()</code> (<code>JwtAuthenticationFilter.java:41</code>). Tokens last 24 h.</td><td>After deactivation, <code>GET /api/auth/me</code> with the old token → 200.</td></tr>
+      <tr><td class="mono">D-C2</td><td><span class="chip sev-med">Medium</span></td><td><b>HR and System Admin can decide any request</b> (<code>LeaveRequestService.java:149</code>). BRD RULE-07 says only the assigned manager may.</td><td>HR approve → 200. The README states this behaviour ("or HR/admin").</td></tr>
+      <tr><td class="mono">D-C3</td><td><span class="chip sev-med">Medium</span></td><td><b>Overlap race, and lock conflicts surface as 500.</b> The overlap check runs before the insert (<code>LeaveRequestService.java:90</code>). <code>@Version</code> conflicts (<code>LeaveBalance.java:39</code>) are not retried or mapped to 409.</td><td>C-01: 2 identical PENDING rows saved. C-02: 7 of 8 valid requests failed with "Row was updated or deleted by another transaction…".</td></tr>
+      <tr><td class="mono">D-C4</td><td><span class="chip sev-med">Medium</span></td><td><b>The generic exception handler returns 500 and the raw exception message</b> (<code>GlobalExceptionHandler.java:44</code>). This affects unknown routes, locked accounts and lock conflicts.</td><td>Unknown route → 500 "No static resource…". Deactivated user login → 500 "User account is locked".</td></tr>
+      <tr><td class="mono">D-C5</td><td><span class="chip sev-med">Medium</span></td><td><b>Any manager can read any employee's balances and profile</b> (<code>LeaveBalanceController.java:27</code>, <code>UserController.java:30</code>).</td><td>A manager from another team got 200 with 3 balances.</td></tr>
+      <tr><td class="mono">D-C6</td><td><span class="chip sev-med">Medium</span></td><td><b>Configuration is hard-coded and the schema is unmanaged:</b> the DB password and JWT secret are in <code>application.yml:31</code>, CORS origins in <code>SecurityConfig.java:72</code>, and the schema uses <code>ddl-auto: update</code> (<code>application.yml:14</code>) with no migrations.</td><td>Source review. No environment-variable placeholders anywhere in the config.</td></tr>
+      <tr><td class="mono">D-C7</td><td><span class="chip sev-low">Low</span></td><td><b>N+1 queries in the user list:</b> one query per user to fetch the manager (<code>UserService.java:48</code>).</td><td>Slowest Cursor read: p50 39.8 ms vs 12.2 ms for IBM.</td></tr>
+      <tr><td class="mono">D-C8</td><td><span class="chip sev-low">Low</span></td><td><b>No tests and no app containers.</b> There is no <code>src/test</code>, compose only starts Postgres, email is off by default, and oxlint reports 11 warnings (hook dependencies, setState in effects).</td><td><code>ls backend/src/test</code> → not found. <code>npx oxlint src</code>.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="security">
+  <h2>Security &amp; robustness checks</h2>
+  <p class="sub">The same probes were run against both APIs. "Pass" means the safe or expected behaviour.</p>
+  <div class="tframe"><table>
+    <thead><tr><th>Check</th><th>Expected</th><th>Cursor</th><th>IBM Bob</th></tr></thead>
+    <tbody>
+      <tr><td>New employee gets balances on creation</td><td>yes</td><td><span class="chip pass">Pass</span><span class="ev">3 balances</span></td><td><span class="chip fail">Fail</span><span class="ev">0 balances, submit → 400</span></td></tr>
+      <tr><td>Employee reads another employee's request by id</td><td>403/404</td><td><span class="chip na">N/A</span><span class="ev">No such endpoint (returns 500 instead of 404, see D-C4)</span></td><td><span class="chip fail">Fail</span><span class="ev">200, full record</span></td></tr>
+      <tr><td>Manager reads another team's balances</td><td>403</td><td><span class="chip fail">Fail</span><span class="ev">200</span></td><td><span class="chip fail">Fail</span><span class="ev">200</span></td></tr>
+      <tr><td>Employee calls HR-only endpoint</td><td>403</td><td><span class="chip pass">Pass</span><span class="ev">403 <button class="shotlink" data-shot="cursor/26-rbac-employee-on-hr-page.png">screen</button></span></td><td><span class="chip pass">Pass</span><span class="ev">403, and the UI redirects to /unauthorized <button class="shotlink" data-shot="ibm/24-rbac-employee-on-hr-page.png">screen</button></span></td></tr>
+      <tr><td>HR lists leave policies</td><td>200</td><td><span class="chip pass">Pass</span><span class="ev">3 policies</span></td><td><span class="chip fail">Fail</span><span class="ev">500</span></td></tr>
+      <tr><td>HR lists audit logs</td><td>200</td><td><span class="chip pass">Pass</span></td><td><span class="chip fail">Fail</span><span class="ev">500</span></td></tr>
+      <tr><td>Deactivated user: old token</td><td>401/403</td><td><span class="chip fail">Fail</span><span class="ev">200</span></td><td><span class="chip pass">Pass</span><span class="ev">403</span></td></tr>
+      <tr><td>Deactivated user: new login</td><td>401/403</td><td><span class="chip fail">Fail</span><span class="ev">500 "User account is locked"</span></td><td><span class="chip fail">Fail</span><span class="ev">500</span></td></tr>
+      <tr><td>Wrong password</td><td>401</td><td><span class="chip pass">Pass</span><span class="ev">401</span></td><td><span class="chip fail">Fail</span><span class="ev">500</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Concurrency</h3>
+  <div class="tframe"><table>
+    <thead><tr><th>Test</th><th>Correct outcome</th><th>Cursor</th><th>IBM Bob</th></tr></thead>
+    <tbody>
+      <tr><td><b>C-01</b> · 8 identical 2-day requests in parallel</td><td>exactly 1 saved</td><td><span class="chip fail">2 saved</span><span class="ev">Statuses: 200, 200, 409 ×2, 500 ×4</span></td><td><span class="chip fail">3 saved</span><span class="ev">Statuses: 201 ×3, 400 ×5</span></td></tr>
+      <tr><td><b>C-02</b> · 8 different 2-day sick requests in parallel, 10 days available</td><td>5 saved, balance never negative</td><td><span class="chip part">1 saved</span><span class="ev">Balance safe. 7 valid requests rejected with 500 (optimistic lock).</span></td><td><span class="chip part">5 saved</span><span class="ev">Balance exactly 10/10, but 2 of the 5 saved requests returned 500 to the client.</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="performance">
+  <h2>Performance</h2>
+  <p class="sub">Sequential latency from 40 calls per endpoint (20 for login) after warm-up, plus one burst of 200 calls at 20 in parallel. Both databases held fewer than 100 leave requests.</p>
+  <div class="legend"><span><i style="background:var(--cursor)"></i>Cursor</span><span><i style="background:var(--ibm)"></i>IBM Bob</span><span>p50 latency, ms (shorter is better)</span></div>
+  <div class="bars" id="latbars"></div>
+  <div class="tframe"><table>
+    <thead><tr><th>Measurement</th><th class="num">Cursor p50</th><th class="num">Cursor p95</th><th class="num">IBM p50</th><th class="num">IBM p95</th></tr></thead>
+    <tbody>
+      <tr><td>POST login (BCrypt)</td><td class="num">166.8</td><td class="num">205.2</td><td class="num">116.3</td><td class="num">127.6</td></tr>
+      <tr><td>GET my balances</td><td class="num">15.6</td><td class="num">23.2</td><td class="num">23.4</td><td class="num">37.7</td></tr>
+      <tr><td>GET my requests</td><td class="num">14.3</td><td class="num">22.7</td><td class="num">18.0</td><td class="num">39.3</td></tr>
+      <tr><td>GET all requests (HR)</td><td class="num">16.2</td><td class="num">20.8</td><td class="num">17.3</td><td class="num">32.0</td></tr>
+      <tr><td>GET employees (HR)</td><td class="num">39.8</td><td class="num">62.5</td><td class="num">12.2</td><td class="num">21.6</td></tr>
+      <tr><td><b>Burst:</b> GET all requests, 200 calls at 20 in parallel</td><td class="num" colspan="2"><b>472.8 req/s</b> (0.42 s, 0 errors)</td><td class="num" colspan="2"><b>209.4 req/s</b> (0.96 s, 0 errors)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Build &amp; footprint</h3>
+  <div class="tframe"><table>
+    <thead><tr><th>Measurement</th><th class="num">Cursor</th><th class="num">IBM Bob</th></tr></thead>
+    <tbody>
+      <tr><td>Production JS bundle (gzip)</td><td class="num">86.1 KB</td><td class="num">118.4 KB</td></tr>
+      <tr><td>Production JS bundle (raw)</td><td class="num">288.0 KB</td><td class="num">390.5 KB</td></tr>
+      <tr><td>Frontend <code>node_modules</code></td><td class="num">71 MB</td><td class="num">385 MB</td></tr>
+      <tr><td>Frontend toolchain</td><td class="num">Vite 8</td><td class="num">CRA 5 (deprecated)</td></tr>
+      <tr><td>Docker images</td><td class="num">Postgres only</td><td class="num">backend 356 MB · frontend 77 MB</td></tr>
+      <tr><td>Backend startup (measured)</td><td class="num">not containerised</td><td class="num">11.7 s · 16.6 s after restart</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout">The runtimes are not identical. Cursor's API ran on the host JVM (<code>mvn spring-boot:run</code>), while IBM's ran inside Docker Desktop, which adds network and CPU overhead. Treat the throughput gap as indicative. The code-level causes are clearer: Cursor fetch-joins its list queries. IBM's read methods have no transaction and depend on Open-Session-in-View for lazy loading, which Spring warns about at startup. Cursor's user list has an N+1 query (D-C7), which is why it is slower on that one endpoint.</p>
+</section>
+
+<section id="quality">
+  <h2>Code quality</h2>
+  <p class="sub">Both use the same layered structure (controller → service → repository → entity) and are about the same size.</p>
+  <div class="tframe"><table>
+    <thead><tr><th>Aspect</th><th>Cursor</th><th>IBM Bob</th></tr></thead>
+    <tbody>
+      <tr><td>Backend size</td><td>52 Java files · 3,232 lines (explicit constructors and getters)</td><td>47 Java files · 2,019 lines (Lombok)</td></tr>
+      <tr><td>Frontend size</td><td>21 files · 1,467 lines · JavaScript</td><td>28 files · 2,501 lines · TypeScript</td></tr>
+      <tr><td>API boundary</td><td>Java <code>record</code> DTOs for every request and response, mapped in one <code>Mapper</code></td><td>DTOs for leave, user and balance, but <b>raw entities</b> for leave types, policies and audit logs (causes D-I3 and D-I8)</td></tr>
+      <tr><td>Transactions</td><td>33 <code>@Transactional</code>, including read-only reads. <code>open-in-view: false</code></td><td>9 <code>@Transactional</code>. Reads rely on Open-Session-in-View. <code>@Async</code> audit and email run outside the transaction (causes D-I1)</td></tr>
+      <tr><td>Query design</td><td>JPQL <code>join fetch</code> for list and detail queries. Count query for overlap</td><td>Derived queries with lazy loading per row. Pessimistic lock on the balance lookup</td></tr>
+      <tr><td>Validation</td><td>Bean Validation on all request records. Business checks with HTTP status codes (400/403/404/409)</td><td>Bean Validation on DTOs. Every business error is 400, including authorisation failures</td></tr>
+      <tr><td>Error handling</td><td>Handles validation, bad credentials and access denied. Everything else → 500 with the raw message (D-C4)</td><td>Handles validation, not-found and business errors. Everything else → 500, including bad credentials (D-I6)</td></tr>
+      <tr><td>Schema management</td><td>Hibernate <code>ddl-auto: update</code></td><td>Flyway V1–V3 with indexes, FKs and unique constraints. V3 patches a wrong password hash in V2</td></tr>
+      <tr><td>Configuration</td><td>Hard-coded in <code>application.yml</code> and <code>SecurityConfig</code></td><td><code>${ENV:default}</code> placeholders, <code>.env.example</code> for backend and frontend</td></tr>
+      <tr><td>Security setup</td><td>JJWT 0.12 with HS512 and claims for uid and role. Method security via <code>@PreAuthorize</code></td><td>JJWT legacy API with HS256 and subject only. URL rules per role prefix plus method security</td></tr>
+      <tr><td>Frontend architecture</td><td>Single <code>fetch</code> wrapper, context auth, shared CSS classes (5 inline styles). No client-side role guard (the server enforces roles)</td><td>Axios with interceptors (401 → login), typed services and types, <code>RequireAuth</code> with role lists. 218 inline style objects</td></tr>
+      <tr><td>Static checks</td><td>oxlint: 0 errors, 11 warnings</td><td><code>tsc --noEmit</code>: passes. 17 uses of <code>any</code></td></tr>
+      <tr><td>Tests</td><td>None</td><td>One default CRA test, which fails to run</td></tr>
+      <tr><td>Docs</td><td>Concise README that matches the code</td><td>Detailed README with an API table and architecture, but its rule claims don't match the running app</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="coverage">
+  <h2>BRD scope coverage</h2>
+  <p class="sub">The 13 in-scope items from BRD §2.1, checked against the running UI and API.</p>
+  <div class="tframe"><table>
+    <thead><tr><th>#</th><th>Scope item</th><th>Cursor</th><th>IBM Bob</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Authentication &amp; authorisation</td><td><span class="chip pass">Yes</span></td><td><span class="chip part">Partial</span><span class="ev">Works, but self-approval and request-by-id leak</span></td></tr>
+      <tr><td>2</td><td>Employee profile management</td><td><span class="chip pass">Yes</span></td><td><span class="chip pass">Yes</span><span class="ev">Plus activate/deactivate endpoints</span></td></tr>
+      <tr><td>3</td><td>Leave type management</td><td><span class="chip pass">Yes</span></td><td><span class="chip part">Partial</span><span class="ev">Works, but partial updates wipe fields</span></td></tr>
+      <tr><td>4</td><td>Leave policy configuration</td><td><span class="chip pass">Yes</span></td><td><span class="chip fail">No</span><span class="ev">The policy list returns 500, so the screen is empty</span></td></tr>
+      <tr><td>5</td><td>Leave balance management</td><td><span class="chip pass">Yes</span></td><td><span class="chip part">Partial</span><span class="ev">Needs manual bulk-assign. Has adjustment history</span></td></tr>
+      <tr><td>6</td><td>Leave request submission</td><td><span class="chip pass">Yes</span></td><td><span class="chip pass">Yes</span></td></tr>
+      <tr><td>7</td><td>Manager approval / rejection</td><td><span class="chip pass">Yes</span></td><td><span class="chip fail">No</span><span class="ev">Fails about 90% of the time</span></td></tr>
+      <tr><td>8</td><td>Cancellation</td><td><span class="chip pass">Yes</span></td><td><span class="chip pass">Yes</span></td></tr>
+      <tr><td>9</td><td>Leave history</td><td><span class="chip pass">Yes</span></td><td><span class="chip pass">Yes</span></td></tr>
+      <tr><td>10</td><td>Email notifications</td><td><span class="chip part">Partial</span><span class="ev">In-app notifications. Email is built but off by default</span></td><td><span class="chip part">Partial</span><span class="ev">Email via MailHog, which triggers D-I1. No in-app notifications</span></td></tr>
+      <tr><td>11</td><td>HR dashboard &amp; reporting</td><td><span class="chip pass">Yes</span><span class="ev">Status summary report</span></td><td><span class="chip pass">Yes</span><span class="ev">Dashboard counts and recent requests</span></td></tr>
+      <tr><td>12</td><td>Audit logging</td><td><span class="chip pass">Yes</span></td><td><span class="chip part">Partial</span><span class="ev">Rows are written, but the audit screen returns 500</span></td></tr>
+      <tr><td>13</td><td>Employee &amp; manager dashboards</td><td><span class="chip pass">Yes</span><span class="ev">Includes the manager's team schedule</span></td><td><span class="chip pass">Yes</span><span class="ev">Team history list, no schedule view</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout">Neither build gives the System Administrator anything beyond the HR screens. BRD §4.4 also asks for application settings, security settings and health monitoring.</p>
+</section>
+
+<section id="rule-shots">
+  <h2>Rule evidence, side by side</h2>
+  <p class="sub">The same action performed in each UI. Click any image to enlarge it.</p>
+  <div id="pairs"></div>
+</section>
+
+<section id="gallery">
+  <h2>All screens</h2>
+  <p class="sub">Every page for each role, captured headless at 1440 px wide as full-page PNGs. Data includes the demo records and the verification test users created during this evaluation.</p>
+  <div class="tabs" role="tablist" aria-label="Application">
+    <button class="tab c" role="tab" id="tab-cursor" aria-selected="true" data-app="cursor">Cursor · 28 shots</button>
+    <button class="tab i" role="tab" id="tab-ibm" aria-selected="false" data-app="ibm">IBM Bob · 26 shots</button>
+  </div>
+  <div class="gallery" id="grid" role="tabpanel" aria-labelledby="tab-cursor"></div>
+</section>
+
+<section id="method">
+  <h2>Method &amp; reproducibility</h2>
+  <div class="cols">
+    <div>
+      <h3>What was run</h3>
+      <ul class="plain">
+        <li><b>Static review</b> of every backend service, controller, repository, security and config file, plus each frontend's routing, API layer and forms.</li>
+        <li><b>API verification</b> with <code>comparison/verify/verify.mjs</code>: the same scenarios through each app's own endpoints, using fresh users for each run.</li>
+        <li><b>Follow-up checks</b>: <code>approve-repeat.mjs</code>, <code>retry-decide.mjs</code> and <code>selfapprove.mjs</code> (D-I1, D-I2), <code>holiday.mjs</code> (RULE-13), <code>rule11-ibm.mjs</code> (RULE-11). Database state was confirmed with <code>psql</code>.</li>
+        <li><b>Screenshots</b> with <code>screenshots.mjs</code> (Playwright driving local Chrome). <code>manifest.json</code> in each folder records the banner text and browser validation messages.</li>
+        <li><b>Static checks</b>: <code>tsc --noEmit</code>, <code>oxlint</code>, <code>react-scripts test</code>, bundle sizes with gzip.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Caveats</h3>
+      <ul class="plain">
+        <li>The IBM decision failure rate depends on timing. Across 61 attempts, 6 committed (10%). The cause is deterministic: shared Hibernate session access from <code>@Async</code> threads.</li>
+        <li>Test users (<code>*@verify.test</code>, <code>demo.*@elms.com</code>) and their requests remain in both demo databases. A temporary 2026 holiday row and a temporary leave type were added to IBM's database and then deleted.</li>
+        <li>The IBM backend container was restarted once to rule out degradation over uptime. Failures continued after the restart.</li>
+        <li>The performance numbers come from different runtimes (host JVM vs Docker) and are indicative only.</li>
+        <li>Build-time and token figures come from each tool's own report and were not measured here.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Source paths are relative to <code>cursor/backend/src/main/java/com/ibm/elms/</code> and <code>ibm/elms/backend/src/main/java/com/elms/app/</code>. Raw results: <code>comparison/verify/results.json</code>.
+</footer>
+</div>
+
+<dialog id="lb" aria-label="Screenshot">
+  <div class="lb">
+    <div class="lb-bar"><span id="lb-cap"></span><button type="button" id="lb-close">Close</button></div>
+    <img id="lb-img" alt="">
+  </div>
+</dialog>
+
+<script>
+const SHOTS = {
+  cursor: [
+    ['Public', [['01-login.png','Login page'],['02-login-invalid.png','Invalid credentials → 401 message'],['03-unauthenticated-redirect.png','Protected page without login → redirect']]],
+    ['Employee', [['04-employee-home.png','Dashboard & balances'],['05-employee-request-leave.png','Request leave'],['06-employee-history.png','Leave history'],['07-employee-notifications.png','Notifications']]],
+    ['Manager', [['08-manager-home.png','Dashboard'],['09-manager-approvals.png','Pending approvals'],['10-manager-team.png','Team & schedule'],['11-manager-request-leave.png','Manager own leave'],['12-manager-notifications.png','Notifications']]],
+    ['HR Admin', [['13-hr-home.png','HR dashboard / report'],['14-hr-employees.png','Employees'],['15-hr-leave-types.png','Leave types'],['16-hr-policies.png','Leave policies'],['17-hr-balances.png','Balances & adjustments'],['18-hr-requests.png','All requests'],['19-hr-audit.png','Audit log']]],
+    ['System Admin', [['20-admin-home.png','Dashboard'],['21-admin-employees.png','Users']]],
+    ['Rule checks', [['22-rule02-end-before-start.png','RULE-02 end before start'],['23-rule03-past-date.png','RULE-03 past dates'],['24-rule04-insufficient.png','RULE-04 insufficient balance'],['25-rule05-overlap.png','RULE-05 overlap'],['26-rbac-employee-on-hr-page.png','RBAC: employee on HR page'],['27-rule09-manager-approves.png','RULE-09 manager approves'],['28-rule09-employee-balance-after.png','RULE-09 employee after approval']]],
+  ],
+  ibm: [
+    ['Public', [['01-login.png','Login page'],['02-login-invalid.png','Invalid credentials → 500 message'],['03-unauthenticated-redirect.png','Protected page without login → redirect']]],
+    ['Employee', [['04-employee-employee.png','Dashboard & balances'],['05-employee-employee-request.png','Request leave'],['06-employee-employee-history.png','Leave history']]],
+    ['Manager', [['07-manager-manager.png','Dashboard'],['08-manager-manager-pending.png','Pending approvals'],['09-manager-manager-history.png','Team history'],['10-manager-manager-team.png','My team']]],
+    ['HR Admin', [['11-hr-hr.png','HR dashboard'],['12-hr-hr-employees.png','Employees'],['13-hr-hr-leave-types.png','Leave types'],['14-hr-hr-policies.png','Leave policies (empty: API 500)'],['15-hr-hr-balances.png','Balances & adjustments'],['16-hr-hr-requests.png','All requests'],['17-hr-hr-audit-logs.png','Audit logs (empty: API 500)']]],
+    ['System Admin', [['18-admin-hr.png','Dashboard'],['19-admin-hr-employees.png','Users']]],
+    ['Rule checks', [['20-rule02-end-before-start.png','RULE-02 end before start (browser-blocked)'],['21-rule03-past-date.png','RULE-03 past dates (browser-blocked)'],['22-rule04-insufficient.png','RULE-04 insufficient balance'],['23-rule05-overlap.png','RULE-05 overlap'],['24-rbac-employee-on-hr-page.png','RBAC: employee on HR page'],['25-rule09-manager-approves.png','RULE-09 approve → "unexpected error"'],['26-rule09-employee-balance-after.png','RULE-09 employee after approval attempt']]],
+  ],
+};
+const PAIRS = [
+  ['RULE-01 · wrong password', 'cursor/02-login-invalid.png', 'ibm/02-login-invalid.png', 'Cursor: 401 "Invalid email or password". IBM: 500 "An unexpected error occurred".'],
+  ['RULE-02 · end date before start', 'cursor/22-rule02-end-before-start.png', 'ibm/20-rule02-end-before-start.png', 'Cursor: server message. IBM: the browser blocks submit via the min date.'],
+  ['RULE-03 · past dates', 'cursor/23-rule03-past-date.png', 'ibm/21-rule03-past-date.png', 'Both reject. IBM stops it in the browser first.'],
+  ['RULE-04 · insufficient balance', 'cursor/24-rule04-insufficient.png', 'ibm/22-rule04-insufficient.png', 'Both reject. IBM also shows the available days.'],
+  ['RULE-05 · overlapping request', 'cursor/25-rule05-overlap.png', 'ibm/23-rule05-overlap.png', 'Both reject sequential overlaps.'],
+  ['RULE-09 · manager approves', 'cursor/27-rule09-manager-approves.png', 'ibm/25-rule09-manager-approves.png', 'Cursor: the row leaves the queue. IBM: "An unexpected error occurred" and the request stays pending.'],
+  ['RBAC · employee opens an HR page', 'cursor/26-rbac-employee-on-hr-page.png', 'ibm/24-rbac-employee-on-hr-page.png', 'Cursor renders the page and shows the API\'s "Access Denied". IBM redirects to a 403 page.'],
+  ['HR · leave policies', 'cursor/16-hr-policies.png', 'ibm/14-hr-hr-policies.png', 'IBM\'s table is empty because GET /api/hr/policies returns 500.'],
+];
+const LAT = [
+  ['Login', 166.8, 116.3], ['My balances', 15.6, 23.4], ['My requests', 14.3, 18.0], ['All requests', 16.2, 17.3], ['Employees', 39.8, 12.2],
+];
+
+const lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img'), lbCap = document.getElementById('lb-cap');
+function openShot(path, caption) {
+  lbImg.src = 'screenshots/' + path; lbImg.alt = caption || path; lbCap.textContent = caption || path;
+  if (typeof lb.showModal === 'function') lb.showModal(); else window.open('screenshots/' + path);
+}
+document.getElementById('lb-close').addEventListener('click', () => lb.close());
+lb.addEventListener('click', (e) => { if (e.target === lb) lb.close(); });
+
+function thumb(path, label, sub) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'thumb';
+  b.innerHTML = '<img loading="lazy" alt=""><span></span>' + (sub ? '<small></small>' : '');
+  b.querySelector('img').src = 'screenshots/' + path;
+  b.querySelector('img').alt = label;
+  b.querySelector('span').textContent = label;
+  if (sub) b.querySelector('small').textContent = sub;
+  b.addEventListener('click', () => openShot(path, label));
+  return b;
+}
+
+const grid = document.getElementById('grid');
+function renderGallery(app) {
+  grid.textContent = '';
+  for (const [group, items] of SHOTS[app]) {
+    const h = document.createElement('div'); h.className = 'group-h'; h.textContent = group; grid.appendChild(h);
+    for (const [file, label] of items) grid.appendChild(thumb(app + '/' + file, label, file));
+  }
+  grid.setAttribute('aria-labelledby', 'tab-' + app);
+}
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+  renderGallery(t.dataset.app);
+}));
+renderGallery('cursor');
+
+const pairs = document.getElementById('pairs');
+for (const [title, c, i, note] of PAIRS) {
+  const h = document.createElement('h3'); h.textContent = title; pairs.appendChild(h);
+  const p = document.createElement('p'); p.className = 'sub'; p.style.margin = '0'; p.textContent = note; pairs.appendChild(p);
+  const row = document.createElement('div'); row.className = 'pair';
+  for (const [path, who, cls] of [[c, 'Cursor', 'app-c'], [i, 'IBM Bob', 'app-i']]) {
+    const f = document.createElement('figure');
+    const cap = document.createElement('figcaption'); cap.className = cls; cap.textContent = who;
+    f.appendChild(cap); f.appendChild(thumb(path, who + ' · ' + title));
+    row.appendChild(f);
+  }
+  pairs.appendChild(row);
+}
+
+document.querySelectorAll('.shotlink').forEach((b) => b.addEventListener('click', () => openShot(b.dataset.shot, b.dataset.shot)));
+
+const bars = document.getElementById('latbars');
+const max = Math.max(...LAT.flatMap(([, a, b]) => [a, b]));
+for (const [label, c, i] of LAT) {
+  const row = document.createElement('div'); row.className = 'bar-row';
+  row.innerHTML = '<div></div><div class="bar-track"></div>';
+  row.firstChild.textContent = label;
+  for (const [v, cls] of [[c, 'c'], [i, 'i']]) {
+    const line = document.createElement('div'); line.className = 'bar-line';
+    line.innerHTML = '<div class="bar ' + cls + '"></div><span class="bar-label"></span>';
+    line.firstChild.style.width = (v / max * 82) + '%';
+    line.lastChild.textContent = v.toFixed(1) + ' ms';
+    row.lastChild.appendChild(line);
+  }
+  bars.appendChild(row);
+}
+</script>

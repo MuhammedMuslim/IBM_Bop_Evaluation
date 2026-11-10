@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: elms-postgres
+    environment:
+      POSTGRES_DB: elms
+      POSTGRES_USER: elms
+      POSTGRES_PASSWORD: elms123
+    ports:
+      - "5432:5432"
+    volumes:
+      - elms_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elms -d elms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  elms_pgdata:

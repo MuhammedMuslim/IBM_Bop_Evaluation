@@ -1,0 +1,39 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: elms-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/elms
+    username: elms
+    password: elms123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+elms:
+  jwt:
+    secret: elms-dev-secret-key-change-in-production-must-be-at-least-256-bits-long
+    expiration-ms: 86400000
+  mail:
+    from: noreply@elms.local
+    enabled: false
+
+logging:
+  level:
+    com.ibm.elms: INFO

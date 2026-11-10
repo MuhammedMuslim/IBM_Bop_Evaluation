@@ -1,0 +1,28 @@
+Cursor 01-login.png Login page  
+Cursor 02-login-invalid.png RULE-01: invalid credentials rejected ["Invalid email or password"] 
+Cursor 03-unauthenticated-redirect.png RULE-01: protected page without login redirects  
+Cursor 04-employee-home.png EMPLOYEE — Employee dashboard  
+Cursor 05-employee-request-leave.png EMPLOYEE — Request leave  
+Cursor 06-employee-history.png EMPLOYEE — Leave history  
+Cursor 07-employee-notifications.png EMPLOYEE — Notifications  
+Cursor 08-manager-home.png MANAGER — Manager dashboard  
+Cursor 09-manager-approvals.png MANAGER — Pending approvals  
+Cursor 10-manager-team.png MANAGER — Team & schedule  
+Cursor 11-manager-request-leave.png MANAGER — Manager own leave  
+Cursor 12-manager-notifications.png MANAGER — Manager notifications  
+Cursor 13-hr-home.png HR — HR dashboard / reports  
+Cursor 14-hr-employees.png HR — Employees  
+Cursor 15-hr-leave-types.png HR — Leave types  
+Cursor 16-hr-policies.png HR — Leave policies  
+Cursor 17-hr-balances.png HR — Balances & adjustments  
+Cursor 18-hr-requests.png HR — All requests  
+Cursor 19-hr-audit.png HR — Audit log  
+Cursor 20-admin-home.png ADMIN — System admin dashboard  
+Cursor 21-admin-employees.png ADMIN — System admin users  
+Cursor 22-rule02-end-before-start.png RULE-02: end date before start date ["Start date must be on or before end date"] 
+Cursor 23-rule03-past-date.png RULE-03: dates in the past ["Leave cannot start in the past"] 
+Cursor 24-rule04-insufficient.png RULE-04: 15 working days of sick leave vs 10 available ["Overlapping leave request exists"] 
+Cursor 25-rule05-overlap.png RULE-05: overlaps the pending 1–2 Dec request ["Overlapping leave request exists"] 
+Cursor 26-rbac-employee-on-hr-page.png RBAC: employee opens the HR employees page ["Access Denied"] 
+Cursor 27-rule09-manager-approves.png RULE-02/08/09: manager approves a pending request in the UI  
+Cursor 28-rule09-employee-balance-after.png RULE-09: employee balance after the approval attempt  

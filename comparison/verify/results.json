@@ -1,0 +1,890 @@
+{
+  "runId": "mw97xh60",
+  "at": "2026-11-09T12:09:19.656Z",
+  "apps": [
+    {
+      "app": "Cursor",
+      "rules": [
+        {
+          "id": "RULE-01",
+          "title": "Must be authenticated to submit",
+          "expected": "401/403",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "null"
+          }
+        },
+        {
+          "id": "RULE-02",
+          "title": "Start date must be <= end date",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Start date must be on or before end date"
+          }
+        },
+        {
+          "id": "RULE-03",
+          "title": "No past dates",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Leave cannot start in the past"
+          }
+        },
+        {
+          "id": "RULE-04",
+          "title": "Insufficient balance blocked (15 days vs 10 sick)",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Insufficient leave balance"
+          }
+        },
+        {
+          "id": "RULE-13a",
+          "title": "Weekends excluded (Fri 4 Dec - Mon 7 Dec = 2 days)",
+          "expected": "2",
+          "pass": true,
+          "evidence": {
+            "status": 200,
+            "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId",
+            "durationDays": 2
+          }
+        },
+        {
+          "id": "RULE-13b",
+          "title": "Public holiday excluded (21-25 Dec incl. Christmas = 4 days)",
+          "expected": "4",
+          "pass": true,
+          "evidence": {
+            "status": 200,
+            "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId",
+            "durationDays": 4
+          }
+        },
+        {
+          "id": "RULE-05",
+          "title": "Overlapping active requests blocked",
+          "expected": "4xx on 2nd",
+          "pass": true,
+          "evidence": {
+            "first": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+            },
+            "second": {
+              "status": 409,
+              "message": "Overlapping leave request exists"
+            }
+          }
+        },
+        {
+          "id": "RULE-06a",
+          "title": "Employee cannot approve own request",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "Access Denied"
+          }
+        },
+        {
+          "id": "RULE-06b",
+          "title": "Manager cannot approve own request",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "submit": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+            },
+            "approve": {
+              "status": 403,
+              "message": "Employees cannot approve their own requests"
+            }
+          }
+        },
+        {
+          "id": "RULE-06c",
+          "title": "Self-approval impossible even if HR sets user as own manager",
+          "expected": "set-self-manager rejected OR approve 4xx",
+          "pass": true,
+          "evidence": {
+            "setSelfAsManager": {
+              "status": 400,
+              "message": "Employee cannot be their own manager"
+            },
+            "submit": "skipped",
+            "selfApprove": "skipped"
+          }
+        },
+        {
+          "id": "RULE-07a",
+          "title": "Non-assigned manager cannot decide",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "Only the assigned manager can decide this request"
+          }
+        },
+        {
+          "id": "RULE-10",
+          "title": "Rejected request does not affect balance",
+          "expected": "available unchanged",
+          "pass": true,
+          "evidence": {
+            "reject": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+            },
+            "before": {
+              "available": 20,
+              "used": 0,
+              "pending": 0
+            },
+            "after": {
+              "available": 20,
+              "used": 0,
+              "pending": 0
+            }
+          }
+        },
+        {
+          "id": "RULE-08",
+          "title": "Only PENDING can be approved/rejected (approve a rejected one)",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Only pending requests can be decided"
+          }
+        },
+        {
+          "id": "RULE-09",
+          "title": "Approved request reduces available balance (2 days)",
+          "expected": "used +2, available -2",
+          "pass": true,
+          "evidence": {
+            "submit": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+            },
+            "approve": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+            },
+            "before": {
+              "available": 20,
+              "used": 0,
+              "pending": 0
+            },
+            "whilePending": {
+              "available": 18,
+              "used": 0,
+              "pending": 2
+            },
+            "after": {
+              "available": 18,
+              "used": 2,
+              "pending": 0
+            }
+          }
+        },
+        {
+          "id": "RULE-11",
+          "title": "Cancelling approved leave restores balance",
+          "expected": "back to baseline",
+          "pass": true,
+          "evidence": {
+            "cancel": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+            },
+            "after": {
+              "available": 20,
+              "used": 0,
+              "pending": 0
+            },
+            "baseline": {
+              "available": 20,
+              "used": 0,
+              "pending": 0
+            }
+          }
+        },
+        {
+          "id": "RULE-07b",
+          "title": "HR (not the assigned manager) cannot decide",
+          "expected": "4xx",
+          "pass": false,
+          "evidence": {
+            "status": 200,
+            "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+          }
+        },
+        {
+          "id": "RULE-12",
+          "title": "HR adjustment requires a reason",
+          "expected": "blank -> 4xx, with reason -> 2xx",
+          "pass": true,
+          "evidence": {
+            "blank": {
+              "status": 400,
+              "message": "Validation failed"
+            },
+            "withReason": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,year"
+            }
+          }
+        }
+      ],
+      "security": [
+        {
+          "id": "S-01",
+          "title": "New employee receives leave balances automatically on creation",
+          "expected": "balances present",
+          "pass": true,
+          "evidence": {
+            "balancesAfterCreate": 3
+          }
+        },
+        {
+          "id": "S-02",
+          "title": "New employee can submit leave without a manual HR step",
+          "expected": "2xx",
+          "pass": true,
+          "evidence": {
+            "status": 200,
+            "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,managerId"
+          }
+        },
+        {
+          "id": "S-03",
+          "title": "Employee cannot read another employee's leave request by id",
+          "expected": "403/404",
+          "pass": false,
+          "evidence": {
+            "status": 500,
+            "message": "No static resource api/leave-requests/5."
+          }
+        },
+        {
+          "id": "S-04",
+          "title": "Manager cannot view balances of another manager's employee",
+          "expected": "403",
+          "pass": false,
+          "evidence": {
+            "status": 200,
+            "message": "array(3)"
+          }
+        },
+        {
+          "id": "S-05",
+          "title": "Employee blocked from HR-only endpoint (all requests)",
+          "expected": "403",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "Access Denied"
+          }
+        },
+        {
+          "id": "S-06",
+          "title": "HR can list leave policies",
+          "expected": "200",
+          "pass": true,
+          "evidence": {
+            "status": 200,
+            "message": "array(3)"
+          }
+        },
+        {
+          "id": "S-07",
+          "title": "HR can list audit logs",
+          "expected": "200",
+          "pass": true,
+          "evidence": {
+            "status": 200,
+            "message": "array(24)"
+          }
+        },
+        {
+          "id": "S-08",
+          "title": "Deactivated user: existing token rejected",
+          "expected": "401/403",
+          "pass": false,
+          "evidence": {
+            "status": 200,
+            "message": "id,email,firstName,lastName,employeeCode,department"
+          }
+        },
+        {
+          "id": "S-09",
+          "title": "Deactivated user: login rejected with a 4xx (not 5xx)",
+          "expected": "401/403",
+          "pass": false,
+          "evidence": {
+            "status": 500,
+            "message": "User account is locked"
+          }
+        }
+      ],
+      "concurrency": [
+        {
+          "id": "C-01",
+          "title": "8 identical overlapping submits in parallel (expect exactly 1 accepted)",
+          "pass": false,
+          "accepted": 2,
+          "statuses": [
+            200,
+            500,
+            409,
+            500,
+            500,
+            409,
+            500,
+            200
+          ],
+          "messages": [
+            "Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.ibm.elms.domain.entity.LeaveBalance#31]",
+            "Overlapping leave request exists"
+          ]
+        },
+        {
+          "id": "C-02",
+          "title": "8 parallel 2-day sick requests vs 10-day balance (expect <= 5 accepted, balance never negative)",
+          "pass": true,
+          "accepted": 1,
+          "finalBalance": {
+            "available": 8,
+            "used": 0,
+            "pending": 2
+          },
+          "statuses": [
+            500,
+            500,
+            200,
+            500,
+            500,
+            500,
+            500,
+            500
+          ],
+          "messages": [
+            "Row was updated or deleted by another transaction (or unsaved-value mapping was incorrect) : [com.ibm.elms.domain.entity.LeaveBalance#35]"
+          ]
+        }
+      ],
+      "perf": [
+        {
+          "label": "POST login (bcrypt)",
+          "n": 20,
+          "p50": 166.8,
+          "p95": 205.2,
+          "max": 205.2,
+          "errors": 0
+        },
+        {
+          "label": "GET my balances",
+          "n": 40,
+          "p50": 15.6,
+          "p95": 23.2,
+          "max": 24.5,
+          "errors": 0
+        },
+        {
+          "label": "GET my requests",
+          "n": 40,
+          "p50": 14.3,
+          "p95": 22.7,
+          "max": 23.3,
+          "errors": 0
+        },
+        {
+          "label": "GET all requests (HR)",
+          "n": 40,
+          "p50": 16.2,
+          "p95": 20.8,
+          "max": 21.9,
+          "errors": 0
+        },
+        {
+          "label": "GET employees (HR)",
+          "n": 40,
+          "p50": 39.8,
+          "p95": 62.5,
+          "max": 67.9,
+          "errors": 0
+        },
+        {
+          "label": "GET all requests x200 @20 parallel",
+          "n": 200,
+          "concurrency": 20,
+          "seconds": 0.42,
+          "rps": 472.8,
+          "errors": 0
+        }
+      ],
+      "setup": {
+        "bulkAssign": "n/a (automatic)"
+      },
+      "dataVolume": {
+        "requestsInDb": 11
+      }
+    },
+    {
+      "app": "IBM Bob",
+      "rules": [
+        {
+          "id": "RULE-01",
+          "title": "Must be authenticated to submit",
+          "expected": "401/403",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "null"
+          }
+        },
+        {
+          "id": "RULE-02",
+          "title": "Start date must be <= end date",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Start date must be before or equal to end date."
+          }
+        },
+        {
+          "id": "RULE-03",
+          "title": "No past dates",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Leave requests cannot include past dates."
+          }
+        },
+        {
+          "id": "RULE-04",
+          "title": "Insufficient balance blocked (15 days vs 10 sick)",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Insufficient leave balance. Available: 10.00 days."
+          }
+        },
+        {
+          "id": "RULE-13a",
+          "title": "Weekends excluded (Fri 4 Dec - Mon 7 Dec = 2 days)",
+          "expected": "2",
+          "pass": true,
+          "evidence": {
+            "status": 201,
+            "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate",
+            "durationDays": 2
+          }
+        },
+        {
+          "id": "RULE-13b",
+          "title": "Public holiday excluded (21-25 Dec incl. Christmas = 4 days)",
+          "expected": "4",
+          "pass": false,
+          "evidence": {
+            "status": 201,
+            "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate",
+            "durationDays": 5
+          }
+        },
+        {
+          "id": "RULE-05",
+          "title": "Overlapping active requests blocked",
+          "expected": "4xx on 2nd",
+          "pass": true,
+          "evidence": {
+            "first": {
+              "status": 201,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate"
+            },
+            "second": {
+              "status": 400,
+              "message": "You already have an active leave request overlapping these dates."
+            }
+          }
+        },
+        {
+          "id": "RULE-06a",
+          "title": "Employee cannot approve own request",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "null"
+          }
+        },
+        {
+          "id": "RULE-06b",
+          "title": "Manager cannot approve own request",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "submit": {
+              "status": 201,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate"
+            },
+            "approve": {
+              "status": 400,
+              "message": "You are not the assigned manager for this request."
+            }
+          }
+        },
+        {
+          "id": "RULE-06c",
+          "title": "Self-approval impossible even if HR sets user as own manager",
+          "expected": "set-self-manager rejected OR approve 4xx",
+          "pass": true,
+          "evidence": {
+            "setSelfAsManager": {
+              "status": 200,
+              "message": "id,email,firstName,lastName,fullName,role"
+            },
+            "submit": {
+              "status": 201,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate"
+            },
+            "selfApprove": {
+              "status": 500,
+              "message": "An unexpected error occurred"
+            }
+          }
+        },
+        {
+          "id": "RULE-07a",
+          "title": "Non-assigned manager cannot decide",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "You are not the assigned manager for this request."
+          }
+        },
+        {
+          "id": "RULE-10",
+          "title": "Rejected request does not affect balance",
+          "expected": "available unchanged",
+          "pass": true,
+          "evidence": {
+            "reject": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate"
+            },
+            "before": {
+              "available": 21,
+              "used": 0,
+              "pending": 0
+            },
+            "after": {
+              "available": 21,
+              "used": 0,
+              "pending": 0
+            }
+          }
+        },
+        {
+          "id": "RULE-08",
+          "title": "Only PENDING can be approved/rejected (approve a rejected one)",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "Only PENDING requests can be reviewed."
+          }
+        },
+        {
+          "id": "RULE-09",
+          "title": "Approved request reduces available balance (2 days)",
+          "expected": "used +2, available -2",
+          "pass": false,
+          "evidence": {
+            "submit": {
+              "status": 201,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate"
+            },
+            "approve": {
+              "status": 500,
+              "message": "An unexpected error occurred"
+            },
+            "before": {
+              "available": 21,
+              "used": 0,
+              "pending": 0
+            },
+            "whilePending": {
+              "available": 19,
+              "used": 0,
+              "pending": 2
+            },
+            "after": {
+              "available": 19,
+              "used": 0,
+              "pending": 2
+            }
+          }
+        },
+        {
+          "id": "RULE-11",
+          "title": "Cancelling approved leave restores balance",
+          "expected": "back to baseline",
+          "pass": true,
+          "evidence": {
+            "cancel": {
+              "status": 200,
+              "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate"
+            },
+            "after": {
+              "available": 21,
+              "used": 0,
+              "pending": 0
+            },
+            "baseline": {
+              "available": 21,
+              "used": 0,
+              "pending": 0
+            }
+          }
+        },
+        {
+          "id": "RULE-07b",
+          "title": "HR (not the assigned manager) cannot decide",
+          "expected": "4xx",
+          "pass": true,
+          "evidence": {
+            "status": 400,
+            "message": "You are not the assigned manager for this request."
+          }
+        },
+        {
+          "id": "RULE-12",
+          "title": "HR adjustment requires a reason",
+          "expected": "blank -> 4xx, with reason -> 2xx",
+          "pass": true,
+          "evidence": {
+            "blank": {
+              "status": 400,
+              "message": "reason: must not be blank"
+            },
+            "withReason": {
+              "status": 200,
+              "message": "id,leaveTypeId,leaveTypeName,year,totalDays,usedDays"
+            }
+          }
+        }
+      ],
+      "security": [
+        {
+          "id": "S-01",
+          "title": "New employee receives leave balances automatically on creation",
+          "expected": "balances present",
+          "pass": false,
+          "evidence": {
+            "balancesAfterCreate": 0
+          }
+        },
+        {
+          "id": "S-02",
+          "title": "New employee can submit leave without a manual HR step",
+          "expected": "2xx",
+          "pass": false,
+          "evidence": {
+            "status": 400,
+            "message": "No leave balance found for Annual Leave in 2026"
+          }
+        },
+        {
+          "id": "S-03",
+          "title": "Employee cannot read another employee's leave request by id",
+          "expected": "403/404",
+          "pass": false,
+          "evidence": {
+            "status": 200,
+            "message": "id,employeeId,employeeName,leaveTypeId,leaveTypeName,startDate",
+            "body": {
+              "employeeName": "emp Test",
+              "reason": "verify mw97xh60"
+            }
+          }
+        },
+        {
+          "id": "S-04",
+          "title": "Manager cannot view balances of another manager's employee",
+          "expected": "403",
+          "pass": false,
+          "evidence": {
+            "status": 200,
+            "message": "array(6)"
+          }
+        },
+        {
+          "id": "S-05",
+          "title": "Employee blocked from HR-only endpoint (all requests)",
+          "expected": "403",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "null"
+          }
+        },
+        {
+          "id": "S-06",
+          "title": "HR can list leave policies",
+          "expected": "200",
+          "pass": false,
+          "evidence": {
+            "status": 500,
+            "message": "An unexpected error occurred"
+          }
+        },
+        {
+          "id": "S-07",
+          "title": "HR can list audit logs",
+          "expected": "200",
+          "pass": false,
+          "evidence": {
+            "status": 500,
+            "message": "An unexpected error occurred"
+          }
+        },
+        {
+          "id": "S-08",
+          "title": "Deactivated user: existing token rejected",
+          "expected": "401/403",
+          "pass": true,
+          "evidence": {
+            "status": 403,
+            "message": "null"
+          }
+        },
+        {
+          "id": "S-09",
+          "title": "Deactivated user: login rejected with a 4xx (not 5xx)",
+          "expected": "401/403",
+          "pass": false,
+          "evidence": {
+            "status": 500,
+            "message": "An unexpected error occurred"
+          }
+        }
+      ],
+      "concurrency": [
+        {
+          "id": "C-01",
+          "title": "8 identical overlapping submits in parallel (expect exactly 1 accepted)",
+          "pass": false,
+          "accepted": 3,
+          "statuses": [
+            201,
+            201,
+            400,
+            400,
+            400,
+            400,
+            201,
+            400
+          ],
+          "messages": [
+            "You already have an active leave request overlapping these dates."
+          ]
+        },
+        {
+          "id": "C-02",
+          "title": "8 parallel 2-day sick requests vs 10-day balance (expect <= 5 accepted, balance never negative)",
+          "pass": true,
+          "accepted": 3,
+          "finalBalance": {
+            "available": 0,
+            "used": 0,
+            "pending": 10
+          },
+          "statuses": [
+            500,
+            400,
+            500,
+            400,
+            400,
+            201,
+            201,
+            201
+          ],
+          "messages": [
+            "An unexpected error occurred",
+            "Insufficient leave balance. Available: 0.00 days."
+          ]
+        }
+      ],
+      "perf": [
+        {
+          "label": "POST login (bcrypt)",
+          "n": 20,
+          "p50": 116.3,
+          "p95": 127.6,
+          "max": 127.6,
+          "errors": 0
+        },
+        {
+          "label": "GET my balances",
+          "n": 40,
+          "p50": 23.4,
+          "p95": 37.7,
+          "max": 38,
+          "errors": 0
+        },
+        {
+          "label": "GET my requests",
+          "n": 40,
+          "p50": 18,
+          "p95": 39.3,
+          "max": 47.3,
+          "errors": 0
+        },
+        {
+          "label": "GET all requests (HR)",
+          "n": 40,
+          "p50": 17.3,
+          "p95": 32,
+          "max": 32.3,
+          "errors": 0
+        },
+        {
+          "label": "GET employees (HR)",
+          "n": 40,
+          "p50": 12.2,
+          "p95": 21.6,
+          "max": 24.9,
+          "errors": 0
+        },
+        {
+          "label": "GET all requests x200 @20 parallel",
+          "n": 200,
+          "concurrency": 20,
+          "seconds": 0.96,
+          "rps": 209.4,
+          "errors": 0
+        }
+      ],
+      "setup": {
+        "bulkAssign": 200
+      },
+      "dataVolume": {
+        "requestsInDb": 15
+      }
+    }
+  ]
+}
